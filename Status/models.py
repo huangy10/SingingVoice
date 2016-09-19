@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 import uuid
 
 from django.contrib.gis.db import models
-from django.contrib.gis.geos import Point
 from django.utils import timezone
 
 from utils.mixins import HasPublicID

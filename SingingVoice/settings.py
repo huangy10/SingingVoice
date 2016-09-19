@@ -76,8 +76,11 @@ WSGI_APPLICATION = 'SingingVoice.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': "singing_voice_db",
+        'USER': "singer",
+        'PASSWORD': 'a35dce814b2e4f4c9396d929cf62698b',
+        'HOST': 'localhost'
     }
 }
 
