@@ -50,7 +50,7 @@ class MyUserManager(UserManager):
 
 
 class User(AbstractUser, HasPublicID):
-    REQUIRED_FIELDS = ["phone_num", ]
+    REQUIRED_FIELDS = []
     USERNAME_FIELD = "phone_num"
 
     objects = MyUserManager()
