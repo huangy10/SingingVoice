@@ -35,9 +35,9 @@ class MyUserManager(UserManager):
 
     def _create_user(self, phone_num, password, **extra_fields):
         now = timezone.now()
-        if not phone_num or password:
+        if not phone_num or not password:
             raise ValueError("Phone number and password must be set to create a user")
-        user = self.model(phone_num=phone_num, date_joined=now(), **extra_fields)
+        user = self.model(phone_num=phone_num, date_joined=now, **extra_fields)
         user.set_password(password)
         user.save()
         return user
@@ -72,6 +72,8 @@ class User(AbstractUser, HasPublicID):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    device_token = models.CharField(max_length=255, verbose_name='设备的token')
+
     class Meta:
         verbose_name = "用户"
         verbose_name_plural = "用户"
@@ -92,6 +94,15 @@ class User(AbstractUser, HasPublicID):
         if hasattr(self, "is_follow"):
             result.update(is_follow=self.is_follow)
         return result
+
+    def logout(self, commit=True):
+        self.device_token = ""
+        if commit:
+            self.save()
+
+    @property
+    def online(self):
+        return self.device_token != ""
 
 
 class UserRelation(models.Model):
