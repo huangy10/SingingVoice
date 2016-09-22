@@ -56,6 +56,7 @@ class User(AbstractUser, HasPublicID):
     objects = MyUserManager()
 
     phone_num = models.CharField(max_length=20, verbose_name=u"手机号(用户名)", db_index=True, unique=True)
+    name = models.CharField(max_length=255, verbose_name=u"昵称", db_index=True)
     avatar = models.ImageField(upload_to=profile_avatar, verbose_name="头像")
     gender = models.CharField(max_length=1, choices=(
         ('m', u'男'),
@@ -82,6 +83,7 @@ class User(AbstractUser, HasPublicID):
         result = dict(
             id=self.public_id,
             phone_num=self.phone_num,
+            name=self.name,
             avatar=self.avatar.url,
             signature=self.signature,
             fans_num=self.fans_num,
@@ -99,6 +101,17 @@ class User(AbstractUser, HasPublicID):
         self.device_token = ""
         if commit:
             self.save()
+
+    def update(self, name=None, avatar=None, signature=None, commit=True):
+        if name:
+            self.name = name
+        if avatar:
+            self.avatar = avatar
+        if signature:
+            self.signature = signature
+        if commit:
+            self.save()
+
 
     @property
     def online(self):

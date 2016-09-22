@@ -82,12 +82,14 @@ class Status(models.Model, HasPublicID):
             result.update(liked=self.liked)
         if hasattr(self, "like_num"):
             result.update(like_num=self.like_num)
+        if hasattr(self, "comment_num"):
+            result.update(comment_num=self.comment_num)
         return result
 
 
 class Comment(models.Model, HasPublicID):
     user = models.ForeignKey("User.User", verbose_name="用户")
-    status = models.ForeignKey(Status, verbose_name="动态")
+    status = models.ForeignKey(Status, verbose_name="动态", related_name="comments")
     image = models.ImageField(upload_to=status_image, verbose_name="评论图片")
     created_at = models.DateTimeField(auto_now_add=True)
 

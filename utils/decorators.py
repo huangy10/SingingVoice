@@ -1,8 +1,11 @@
 # coding=utf-8
 import json
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from utils.exceptions import DeclarativeException
+from utils.tools import camel_to_under_dash
+
 
 def combine_two_decorators(dec1, dec2):
     return lambda x: dec1(dec2(x))
@@ -42,6 +45,7 @@ def json_request(view):
     """
     def wrapper(request, *args, **kwargs):
         if request.method != "POST":
+            setattr(request, "JSON", request.GET)
             return view(request, *args, **kwargs)
         try:
             data = json.loads(request.body)
@@ -54,12 +58,41 @@ def json_request(view):
 
 
 def may_make_exception(view):
+    """ Notice: when using with json_view, this decorator must be placed as the inner one
+    """
 
     def wrapper(request, *args, **kwargs):
         try:
             return view(request, *args, **kwargs)
         except DeclarativeException as e:
             return e.as_response()
+
+    return wrapper
+
+
+def load_object_by_id(model, id_field=None, get_current_user_if_fail=False, null_instead_of_exception=False):
+    model_name = camel_to_under_dash(model.__name__)
+    if id_field is None:
+        id_field = "%s_id" % model_name
+
+    def wrapper(view):
+        def _wrapper(request, *args, **kwargs):
+            data = request.data
+            if id_field in data:
+                try:
+                    obj = model.objects.get(public_id=data[id_field])
+                except ObjectDoesNotExist:
+                    if not null_instead_of_exception:
+                        raise model.not_found_exception
+                    else:
+                        obj = None
+            elif model.__name__ == "User" and get_current_user_if_fail:
+                obj = request.user
+            else:
+                obj = None
+            kwargs.update({model_name: obj})
+            return view(request, *args, **kwargs)
+        return _wrapper
 
     return wrapper
 
