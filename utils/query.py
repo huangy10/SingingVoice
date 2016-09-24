@@ -4,13 +4,17 @@ from utils.exceptions import OpTypeNotDefinedException
 from utils.format import str_to_date
 
 
+MAX_LIMIT = 1000
+
+
 def get_page_by_skip(data, skip, limit, op_type):
+    limit = min(MAX_LIMIT, limit)
     if op_type == "latest":
         data = data.order_by("-created_at")
     elif op_type == "more":
         data = data.order_by("created_at")
     else:
-        raise OpTypeNotDefinedException(op_type)
+        pass
 
     return data[skip: (skip + limit)]
 
@@ -34,3 +38,14 @@ def model_to_dict(model):
 
 def queries_to_serializable_array(queries):
     return map(model_to_dict, queries)
+
+
+class MetaVisible(type):
+
+    @property
+    def visible(cls):
+        if hasattr(cls, "objects"):
+            return cls.objects.filter(deleted=False)
+        else:
+            return None
+

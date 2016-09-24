@@ -3,8 +3,10 @@ from __future__ import unicode_literals
 import json
 
 from django.db import models
+from django.dispatch import receiver
 from django.utils import timezone
 
+from Message.signal import send_notification
 from utils.mixins import HasPublicID
 from utils.format import date_to_string
 
@@ -48,3 +50,17 @@ class Message(models.Model, HasPublicID):
         if self.related_comment:
             result.update(comment=self.related_comment.dict_description())
         return result
+
+
+@receiver(send_notification)
+def send_notification_handler(sender, message_type, namespace, message_body, source, target, **kwargs):
+    create_param = dict(
+        message_type=message_type,
+        namespace=namespace,
+        message_body=message_body,
+        source=source,
+        target=target,
+        related_status=kwargs.get("status"),
+        related_comment=kwargs.get("comment")
+    )
+    Message.objects.create(**create_param)

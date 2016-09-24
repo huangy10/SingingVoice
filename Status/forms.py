@@ -16,7 +16,15 @@ class StatusNewForm(forms.ModelForm):
 
     class Meta:
         model = Status
-        exclude = ("location", "loc_des")
+
+    def generate_error_report(self):
+        return self.errors.items()[0][0]
+
+
+class CommentNewForm(forms.ModelForm):
+
+    class Meta:
+        model = Comment
 
     def generate_error_report(self):
         return self.errors.items()[0][0]

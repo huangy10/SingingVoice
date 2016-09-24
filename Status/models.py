@@ -3,10 +3,12 @@ from __future__ import unicode_literals
 import uuid
 
 from django.contrib.gis.db import models
+from django.db.models import Count, Sum, Case, When, IntegerField, Value
 from django.utils import timezone
 
 from utils.mixins import HasPublicID
 from utils.format import date_to_string
+from utils.decorators import classproperty
 # Create your models here.
 
 
@@ -40,6 +42,16 @@ def status_voice(instance, filename, *args, **kwargs):
     return new_file_name
 
 
+class StatusManager(models.GeoManager):
+
+    def make_full_annotation(self, user):
+        return self.select_related("user").annotate(like_num=Count("liked_by"))\
+            .annotate(comment_num=Count('comments'))\
+            .annotate(
+            liked=Sum(Case(When(liked_by=user, then=Value(1)), default=Value(0), output_field=IntegerField()))
+        )
+
+
 class Status(models.Model, HasPublicID):
 
     user = models.ForeignKey("User.User", related_name="status", verbose_name='作者')
@@ -51,7 +63,14 @@ class Status(models.Model, HasPublicID):
 
     liked_by = models.ManyToManyField("User.User", related_name="liked_status", verbose_name="点赞")
 
-    objects = models.GeoManager()
+    deleted = models.BooleanField(default=False, verbose_name='动态是否被删除')
+    deleted_at = models.DateTimeField(default=timezone.now, verbose_name='动态被删除的日期')
+
+    objects = StatusManager()
+
+    @classproperty
+    def visible(cls):
+        return cls.objects.filter(deleted=False)
 
     @property
     def latitude(self):
@@ -86,14 +105,37 @@ class Status(models.Model, HasPublicID):
             result.update(comment_num=self.comment_num)
         return result
 
+    def delete(self, using=None, keep_parents=False, commit=False):
+        if commit:
+            super(Status, self).delete(using=using, keep_parents=keep_parents)
+        else:
+            self.deleted = True
+            self.deleted_at = timezone.now()
+            self.save()
+
+
+class CommentManger(models.Manager):
+
+    def make_full_annotation(self, user):
+        return self.select_related("user", "status").annotate(like_num=Count("liked_by"))\
+            .annotate(
+            liked=Sum(Case(When(liked_by=user, then=Value(1)), default=Value(0), output_field=IntegerField()))
+        )
+
 
 class Comment(models.Model, HasPublicID):
+
     user = models.ForeignKey("User.User", verbose_name="用户")
     status = models.ForeignKey(Status, verbose_name="动态", related_name="comments")
     image = models.ImageField(upload_to=status_image, verbose_name="评论图片")
     created_at = models.DateTimeField(auto_now_add=True)
 
     liked_by = models.ManyToManyField("User.User", related_name="liked_comments", verbose_name="点赞")
+
+    deleted = models.BooleanField(default=False, verbose_name="是否被删除")
+    deleted_at = models.DateTimeField(default=timezone.now, verbose_name='删除日期')
+
+    objects = CommentManger()
 
     class Meta:
         verbose_name = "评论"
@@ -113,4 +155,12 @@ class Comment(models.Model, HasPublicID):
             result.update(like_num=self.like_num)
 
         return result
+
+    def delete(self, using=None, keep_parents=False, commit=False):
+        if commit:
+            super(Comment, self).delete(using=using, keep_parents=keep_parents)
+        else:
+            self.deleted = True
+            self.deleted_at = timezone.now()
+            self.save()
 
